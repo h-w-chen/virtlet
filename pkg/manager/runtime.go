@@ -132,6 +132,8 @@ func (v *VirtletRuntimeService) RunPodSandbox(ctx context.Context, in *kubeapi.R
 		PodID:   podID,
 		PodNs:   podNs,
 		PodName: podName,
+		VPC:     "demo",
+		NICs:    config.Annotations["NICs"],
 	}
 	// Mimic kubelet's method of handling nameservers.
 	// As of k8s 1.5.2, kubelet doesn't use any nameserver information from CNI.
