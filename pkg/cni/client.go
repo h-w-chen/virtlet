@@ -114,6 +114,7 @@ type cniRequest struct {
 	PodNs      string
 	VPC        string
 	NICs       string
+	Tenant     string
 }
 
 type realClient struct {
@@ -170,6 +171,9 @@ func handleAddSandboxToNetwork(arg interface{}) (interface{}, error) {
 	})
 	rtConf.Args = append(rtConf.Args, [2]string{
 		"NICs", req.NICs,
+	})
+	rtConf.Args = append(rtConf.Args, [2]string{
+		"Tenant", req.Tenant,
 	})
 
 	glog.V(3).Infof("AddSandboxToNetwork: PodID %q, PodName %q, PodNs %q, runtime config:\n%s",
