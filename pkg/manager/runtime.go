@@ -158,7 +158,7 @@ func (v *VirtletRuntimeService) RunPodSandbox(ctx context.Context, in *kubeapi.R
 		if retErr != nil {
 			// Try to clean up CNI netns if we couldn't add the pod to the metadata store or if AddFDs call wasn't
 			// successful to avoid leaking resources
-			if fdErr := v.fdManager.ReleaseFDs(podID); fdErr != nil {
+			if fdErr := v.fdManager.ReleaseFDs(podID, fdPayload); fdErr != nil {
 				glog.Errorf("Error removing pod %s (%s) from CNI network: %v", podName, podID, fdErr)
 			}
 		}
@@ -210,7 +210,19 @@ func (v *VirtletRuntimeService) StopPodSandbox(ctx context.Context, in *kubeapi.
 			return nil, err
 		}
 
-		if err := v.fdManager.ReleaseFDs(in.PodSandboxId); err != nil {
+		config := sandboxInfo.Config
+		pnd := &tapmanager.PodNetworkDesc{
+			//			PodID:   podID,
+			//			PodNs:   podNs,
+			//			PodName: podName,
+			Tenant: config.Annotations["Tenant"], //"default",
+			VPC:    config.Annotations["VPC"],    //"demo",
+			NICs:   config.Annotations["NICs"],
+		}
+
+		fdPayload := &tapmanager.GetFDPayload{Description: pnd}
+
+		if err := v.fdManager.ReleaseFDs(in.PodSandboxId, fdPayload); err != nil {
 			glog.Errorf("Error releasing tap fd for the pod %q: %v", in.PodSandboxId, err)
 		}
 	}

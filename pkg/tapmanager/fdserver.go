@@ -56,7 +56,7 @@ type FDManager interface {
 	AddFDs(key string, data interface{}) ([]byte, error)
 	// ReleaseFDs makes FDManager close the file descriptor and destroy
 	// any associated resources
-	ReleaseFDs(key string) error
+	ReleaseFDs(key string, data interface{}) error
 	// Recover recovers the state regarding the
 	// specified key. It's intended to be called after
 	// Virtlet restart.
@@ -276,7 +276,14 @@ func (s *FDServer) serveAdd(c *net.UnixConn, hdr *fdHeader) (*fdHeader, []byte, 
 	}, respData, nil
 }
 
-func (s *FDServer) serveRelease(hdr *fdHeader) (*fdHeader, error) {
+func (s *FDServer) serveRelease(c *net.UnixConn, hdr *fdHeader) (*fdHeader, error) {
+	data := make([]byte, hdr.DataSize)
+	if len(data) > 0 {
+		if _, err := io.ReadFull(c, data); err != nil {
+			return nil, fmt.Errorf("error reading payload: %v", err)
+		}
+	}
+
 	key := hdr.getKey()
 	if err := s.source.Release(key); err != nil {
 		return nil, fmt.Errorf("error releasing fd: %v", err)
@@ -352,7 +359,7 @@ func (s *FDServer) serveConn(c *net.UnixConn) error {
 		case fdAdd:
 			respHdr, data, err = s.serveAdd(c, &hdr)
 		case fdRelease:
-			respHdr, err = s.serveRelease(&hdr)
+			respHdr, err = s.serveRelease(c, &hdr)
 		case fdGet:
 			respHdr, data, oobData, err = s.serveGet(c, &hdr)
 		case fdRecover:
@@ -530,11 +537,20 @@ func (c *FDClient) AddFDs(key string, data interface{}) ([]byte, error) {
 
 // ReleaseFDs makes FDServer close the file descriptor and destroy
 // any associated resources
-func (c *FDClient) ReleaseFDs(key string) error {
+func (c *FDClient) ReleaseFDs(key string, data interface{}) error {
+	bs, ok := data.([]byte)
+	if !ok {
+		var err error
+		bs, err = json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("error marshalling json: %v", err)
+		}
+	}
+
 	respHdr, _, _, err := c.request(&fdHeader{
 		Command: fdRelease,
 		Key:     fdKey(key),
-	}, nil)
+	}, bs)
 	if err != nil {
 		return err
 	}

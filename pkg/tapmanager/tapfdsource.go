@@ -153,7 +153,7 @@ func (s *TapFDSource) GetFDs(key string, data []byte) ([]int, []byte, error) {
 	defer func() {
 		if gotError {
 			if podAddedToNetwork {
-				if err := s.cniClient.RemoveSandboxFromNetwork(pnd.PodID, pnd.PodName, pnd.PodNs); err != nil {
+				if err := s.cniClient.RemoveSandboxFromNetwork(pnd.PodID, pnd.PodName, pnd.PodNs, pnd.VPC, pnd.NICs); err != nil {
 					glog.Errorf("Error removing a pod from the pod network after failed network setup: %v", err)
 				}
 			}
@@ -256,7 +256,8 @@ func (s *TapFDSource) Release(key string) error {
 		return err
 	}
 
-	if err := s.cniClient.RemoveSandboxFromNetwork(pn.pnd.PodID, pn.pnd.PodName, pn.pnd.PodNs); err != nil {
+	// ensure alktron required args passed in
+	if err := s.cniClient.RemoveSandboxFromNetwork(pn.pnd.PodID, pn.pnd.PodName, pn.pnd.PodNs, pn.pnd.VPC, pn.pnd.NICs); err != nil {
 		return fmt.Errorf("error removing pod sandbox %q from CNI network: %v", pn.pnd.PodID, err)
 	}
 

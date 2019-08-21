@@ -33,7 +33,7 @@ type Client interface {
 	// AddSandboxToNetwork adds a pod sandbox to the CNI network.
 	AddSandboxToNetwork(podID, podName, podNs string, vpc, nics string) (*cnicurrent.Result, error)
 	// RemoveSandboxFromNetwork removes a pod sandbox from the CNI network.
-	RemoveSandboxFromNetwork(podID, podName, podNs string) error
+	RemoveSandboxFromNetwork(podID, podName, podNs string, vpc, nics string) error
 	// GetDummyNetwork creates a dummy network using CNI plugin.
 	// It's used for making a dummy gateway for Calico CNI plugin.
 	// It returns a CNI result and a path to the network namespace.
@@ -94,7 +94,7 @@ func (c *client) AddSandboxToNetwork(podID, podName, podNs string, vpc, nics str
 }
 
 // RemoveSandboxFromNetwork implements RemoveSandboxFromNetwork method of Client interface.
-func (c *client) RemoveSandboxFromNetwork(podID, podName, podNs string) error {
+func (c *client) RemoveSandboxFromNetwork(podID, podName, podNs string, vpc, nics string) error {
 	return nsfix.NewCall("cniRemoveSandboxFromNetwork").
 		Arg(cniRequest{
 			PluginsDir: c.pluginsDir,
@@ -102,6 +102,8 @@ func (c *client) RemoveSandboxFromNetwork(podID, podName, podNs string) error {
 			PodID:      podID,
 			PodName:    podName,
 			PodNs:      podNs,
+			VPC:        vpc,
+			NICs:       nics,
 		}).
 		SpawnInNamespaces(nil)
 }
@@ -201,8 +203,21 @@ func handleRemoveSandboxFromNetwork(arg interface{}) (interface{}, error) {
 		return nil, err
 	}
 
+	rtConf := c.cniRuntimeConf(req.PodID, req.PodName, req.PodNs)
+
+	// CHW+++
+	rtConf.Args = append(rtConf.Args, [2]string{
+		"VPC", req.VPC,
+	})
+	rtConf.Args = append(rtConf.Args, [2]string{
+		"NICs", req.NICs,
+	})
+	rtConf.Args = append(rtConf.Args, [2]string{
+		"Tenant", req.Tenant,
+	})
+
 	glog.V(3).Infof("RemoveSandboxFromNetwork: PodID %q, PodName %q, PodNs %q", req.PodID, req.PodName, req.PodNs)
-	err = c.cniConfig.DelNetworkList(c.netConfigList, c.cniRuntimeConf(req.PodID, req.PodName, req.PodNs))
+	err = c.cniConfig.DelNetworkList(c.netConfigList, rtConf)
 	if err == nil {
 		glog.V(3).Infof("RemoveSandboxFromNetwork: PodID %q, PodName %q, PodNs %q: success",
 			req.PodID, req.PodName, req.PodNs)
