@@ -132,7 +132,8 @@ func (v *VirtletRuntimeService) RunPodSandbox(ctx context.Context, in *kubeapi.R
 		PodID:   podID,
 		PodNs:   podNs,
 		PodName: podName,
-		VPC:     "demo",
+		Tenant:  config.Annotations["Tenant"], //"default",
+		VPC:     config.Annotations["VPC"],    //"demo",
 		NICs:    config.Annotations["NICs"],
 	}
 	// Mimic kubelet's method of handling nameservers.

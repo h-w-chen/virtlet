@@ -64,8 +64,9 @@ type PodNetworkDesc struct {
 	// DNS specifies DNS settings for the pod
 	DNS *cnitypes.DNS
 	// CHW+++
-	VPC  string `json:"vpc"`
-	NICs string `json:"nics`
+	Tenant string `json:"tenant"`
+	VPC    string `json:"vpc"`
+	NICs   string `json:"nics`
 }
 
 // GetFDPayload contains the data that are required by TapFDSource
